@@ -146,6 +146,31 @@ const ActionIconButton = styled(IconButton)(({ theme }) => ({
   }
 }));
 
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    transform: 'translateY(0)',
+    transition: 'transform 0.3s ease-out !important',
+  },
+  '& .MuiBackdrop-root': {
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    transition: 'opacity 0.3s ease-out !important',
+  },
+  '@keyframes slideIn': {
+    from: {
+      transform: 'translateY(20px)',
+      opacity: 0
+    },
+    to: {
+      transform: 'translateY(0)',
+      opacity: 1
+    }
+  },
+  '@keyframes fadeIn': {
+    from: { opacity: 0 },
+    to: { opacity: 1 }
+  }
+}));
+
 class AdminDashboard extends Component {
   constructor(props) {
     super(props);
@@ -171,7 +196,8 @@ class AdminDashboard extends Component {
       page: 0,
       rowsPerPage: 7,
       filterAnchorEl: null,
-      statusFilter: 'all'
+      statusFilter: 'all',
+      logoutDialogOpen: false
     };
     this._navigate = props.navigate;
   }
@@ -187,6 +213,7 @@ class AdminDashboard extends Component {
   get rowsPerPage() { return this._state.rowsPerPage; }
   get filterAnchorEl() { return this._state.filterAnchorEl; }
   get statusFilter() { return this._state.statusFilter; }
+  get logoutDialogOpen() { return this._state.logoutDialogOpen; }
 
   // Setters
   set users(value) {
@@ -227,6 +254,10 @@ class AdminDashboard extends Component {
   }
   set statusFilter(value) {
     this._state = { ...this._state, statusFilter: value };
+    this.forceUpdate();
+  }
+  set logoutDialogOpen(value) {
+    this._state = { ...this._state, logoutDialogOpen: value };
     this.forceUpdate();
   }
 
@@ -351,7 +382,11 @@ class AdminDashboard extends Component {
     }
   }
 
-  handleLogout = async () => {
+  handleLogoutClick = () => {
+    this.logoutDialogOpen = true;
+  }
+
+  handleLogoutConfirm = async () => {
     try {
       await auth.signOut();
       this._navigate('/login');
@@ -363,6 +398,11 @@ class AdminDashboard extends Component {
         severity: 'error'
       };
     }
+    this.logoutDialogOpen = false;
+  }
+
+  handleLogoutCancel = () => {
+    this.logoutDialogOpen = false;
   }
 
   get filteredUsers() {
@@ -413,12 +453,10 @@ class AdminDashboard extends Component {
               </Typography>
               <Button 
                 color="inherit"
-                onClick={this.handleLogout}
+                onClick={this.handleLogoutClick}
                 sx={{ 
                   fontWeight: 'bold',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.1)'
-                  }
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
                 }}
               >
                 Logout
@@ -653,6 +691,101 @@ class AdminDashboard extends Component {
               {this.snackbar.message}
             </Alert>
           </Snackbar>
+
+          <StyledDialog
+            open={this.logoutDialogOpen}
+            onClose={this.handleLogoutCancel}
+            TransitionProps={{
+              timeout: 300,
+              onEnter: (node) => {
+                node.style.animation = 'slideIn 0.3s ease-out';
+              },
+              onExit: (node) => {
+                node.style.animation = 'none';
+                node.style.transform = 'translateY(20px)';
+                node.style.opacity = '0';
+              }
+            }}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                minWidth: '300px',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                backdropFilter: 'blur(10px)',
+              }
+            }}
+            BackdropProps={{
+              sx: {
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                backdropFilter: 'blur(4px)'
+              }
+            }}
+          >
+            <DialogTitle 
+              sx={{ 
+                borderBottom: '1px solid rgba(0,0,0,0.1)',
+                pb: 2,
+                fontWeight: 600,
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              Confirm Logout
+            </DialogTitle>
+            <DialogContent sx={{ 
+              py: 3,
+              px: 3,
+              typography: 'body1',
+              color: 'text.secondary'
+            }}>
+              Are you sure you want to log out of the admin dashboard?
+            </DialogContent>
+            <DialogActions sx={{ 
+              px: 3, 
+              pb: 3,
+              borderTop: '1px solid rgba(0,0,0,0.1)',
+              pt: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Button 
+                onClick={this.handleLogoutCancel}
+                sx={{ 
+                  color: 'text.secondary',
+                  px: 3,
+                  py: 1,
+                  '&:hover': { 
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    transform: 'translateY(-1px)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={this.handleLogoutConfirm}
+                variant="contained"
+                color="primary"
+                sx={{ 
+                  ml: 1,
+                  px: 3,
+                  py: 1,
+                  fontWeight: 500,
+                  '&:hover': { 
+                    backgroundColor: theme.palette.primary.dark,
+                    boxShadow: '0 4px 12px rgba(128,0,0,0.3)',
+                    transform: 'translateY(-1px)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Logout
+              </Button>
+            </DialogActions>
+          </StyledDialog>
         </BackgroundContainer>
       </ThemeProvider>
     );
