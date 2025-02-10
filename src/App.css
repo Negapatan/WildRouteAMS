@@ -1,0 +1,64 @@
+.App {
+  text-align: center;
+}
+
+body {
+  background-image: url('./assets/bg.jpg');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  margin: 0;
+  padding: 0;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cit-logo {
+  height: 40px;
+  width: auto;
+}
+
+.word-logo {
+  height: 30px;
+  width: auto;
+}
+
+/* Update the color scheme to match CIT branding */
+.MuiTableCell-head {
+  background-color: #800000 !important; /* CIT Maroon */
+  color: white !important;
+  font-weight: bold !important;
+}
+
+.MuiTableRow-root:hover {
+  background-color: rgba(255, 215, 0, 0.1) !important; /* Gold with opacity */
+}
+
+.MuiPaper-root {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+}
+
+.gold-gradient {
+  background: linear-gradient(45deg, #FFD700 30%, #FDB931 90%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.maroon-gradient {
+  background: linear-gradient(45deg, #800000 30%, #a31545 90%);
+}
+
+/* Add CIT-specific styles */
+.cit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(128, 0, 0, 0.95);
+}
