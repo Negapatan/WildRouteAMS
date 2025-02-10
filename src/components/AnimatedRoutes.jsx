@@ -32,8 +32,10 @@ class AnimatedRoutes extends Component {
   }
 }
 
-// Wrap with location
-export default (props) => {
+// Name the HOC before exporting
+const WithLocationAnimatedRoutes = (props) => {
   const location = useLocation();
   return <AnimatedRoutes {...props} location={location} />;
-}; 
+};
+
+export default WithLocationAnimatedRoutes; 

@@ -355,8 +355,10 @@ class Login extends Component {
   }
 }
 
-// Wrap with navigate
-export default (props) => {
+// Name the HOC before exporting
+const WithNavigateLogin = (props) => {
   const navigate = useNavigate();
   return <Login {...props} navigate={navigate} />;
 };
+
+export default WithNavigateLogin;

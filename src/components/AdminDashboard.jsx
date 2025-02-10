@@ -659,8 +659,10 @@ class AdminDashboard extends Component {
   }
 }
 
-// Wrap with navigate
-export default (props) => {
+// Name the HOC before exporting
+const WithNavigateAdminDashboard = (props) => {
   const navigate = useNavigate();
   return <AdminDashboard {...props} navigate={navigate} />;
-}; 
+};
+
+export default WithNavigateAdminDashboard; 

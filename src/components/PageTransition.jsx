@@ -43,8 +43,10 @@ class PageTransition extends Component {
   }
 }
 
-// Wrap with location
-export default (props) => {
+// Name the HOC before exporting
+const WithLocationPageTransition = (props) => {
   const location = useLocation();
   return <PageTransition {...props} location={location} />;
-}; 
+};
+
+export default WithLocationPageTransition; 
