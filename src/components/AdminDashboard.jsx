@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Component } from 'react';
 import {
   Box,
   Typography,
@@ -146,31 +146,98 @@ const ActionIconButton = styled(IconButton)(({ theme }) => ({
   }
 }));
 
-const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const [users, setUsers] = useState([]);
-  const [adminName, setAdminName] = useState('');
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    id: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    idNumber: '',
-    status: ''
-  });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(7);
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+class AdminDashboard extends Component {
+  constructor(props) {
+    super(props);
+    this._state = {
+      users: [],
+      adminName: '',
+      editDialogOpen: false,
+      editFormData: {
+        id: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        idNumber: '',
+        status: ''
+      },
+      snackbar: { 
+        open: false, 
+        message: '', 
+        severity: 'success' 
+      },
+      loading: true,
+      page: 0,
+      rowsPerPage: 7,
+      filterAnchorEl: null,
+      statusFilter: 'all'
+    };
+    this._navigate = props.navigate;
+  }
 
-  useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+  // Getters
+  get users() { return this._state.users; }
+  get adminName() { return this._state.adminName; }
+  get editDialogOpen() { return this._state.editDialogOpen; }
+  get editFormData() { return this._state.editFormData; }
+  get snackbar() { return this._state.snackbar; }
+  get loading() { return this._state.loading; }
+  get page() { return this._state.page; }
+  get rowsPerPage() { return this._state.rowsPerPage; }
+  get filterAnchorEl() { return this._state.filterAnchorEl; }
+  get statusFilter() { return this._state.statusFilter; }
+
+  // Setters
+  set users(value) {
+    this._state = { ...this._state, users: value };
+    this.forceUpdate();
+  }
+  set adminName(value) {
+    this._state = { ...this._state, adminName: value };
+    this.forceUpdate();
+  }
+  set editDialogOpen(value) {
+    this._state = { ...this._state, editDialogOpen: value };
+    this.forceUpdate();
+  }
+  set editFormData(value) {
+    this._state = { ...this._state, editFormData: value };
+    this.forceUpdate();
+  }
+  set snackbar(value) {
+    this._state = { ...this._state, snackbar: value };
+    this.forceUpdate();
+  }
+  set loading(value) {
+    this._state = { ...this._state, loading: value };
+    this.forceUpdate();
+  }
+  set page(value) {
+    this._state = { ...this._state, page: value };
+    this.forceUpdate();
+  }
+  set rowsPerPage(value) {
+    this._state = { ...this._state, rowsPerPage: value };
+    this.forceUpdate();
+  }
+  set filterAnchorEl(value) {
+    this._state = { ...this._state, filterAnchorEl: value };
+    this.forceUpdate();
+  }
+  set statusFilter(value) {
+    this._state = { ...this._state, statusFilter: value };
+    this.forceUpdate();
+  }
+
+  componentDidMount() {
+    this.setupAuthListener();
+  }
+
+  setupAuthListener = () => {
+    return auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        navigate('/login');
+        this._navigate('/login');
         return;
       }
 
@@ -179,58 +246,49 @@ const AdminDashboard = () => {
         const adminData = adminDoc.data();
 
         if (!adminData || adminData.role !== 'admin') {
-          navigate('/login');
+          this._navigate('/login');
           return;
         }
 
-        setAdminName(adminData.firstName || 'Admin');
-        fetchUsers();
+        this.adminName = adminData.firstName || 'Admin';
+        this.fetchUsers();
       } catch (error) {
         console.error('Error:', error);
-        setSnackbar({
+        this.snackbar = {
           open: true,
           message: 'Error verifying admin status',
           severity: 'error'
-        });
-        navigate('/login');
+        };
+        this._navigate('/login');
       }
     });
+  }
 
-    return () => unsubscribeAuth();
-  }, [navigate]);
-
-  useEffect(() => {
-    document.title = 'WildCore Account Management';
-    return () => {
-      document.title = 'WildCore';
-    };
-  }, []);
-
-  const fetchUsers = async () => {
+  fetchUsers = async () => {
     try {
-      setLoading(true);
+      this.loading = true;
       const usersQuery = query(collection(firestore, 'users'));
       onSnapshot(usersQuery, (snapshot) => {
         const usersList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        setUsers(usersList);
-        setLoading(false);
+        this.users = usersList;
+        this.loading = false;
       });
     } catch (error) {
       console.error('Error fetching users:', error);
-      setSnackbar({
+      this.snackbar = {
         open: true,
         message: 'Error loading users',
         severity: 'error'
-      });
-      setLoading(false);
+      };
+      this.loading = false;
     }
-  };
+  }
 
-  const handleEditClick = (user) => {
-    setEditFormData({
+  handleEditClick = (user) => {
+    this.editFormData = {
       id: user.id,
       firstName: user.firstName || '',
       lastName: user.lastName || '',
@@ -238,369 +296,371 @@ const AdminDashboard = () => {
       phoneNumber: user.phoneNumber || '',
       idNumber: user.idNumber || '',
       status: user.status || 'active'
-    });
-    setEditDialogOpen(true);
-  };
+    };
+    this.editDialogOpen = true;
+  }
 
-  const handleEdit = async () => {
+  handleEdit = async () => {
     try {
       const batch = writeBatch(firestore);
       
-      const userRef = doc(firestore, 'users', editFormData.id);
+      const userRef = doc(firestore, 'users', this.editFormData.id);
       batch.update(userRef, {
-        firstName: editFormData.firstName,
-        lastName: editFormData.lastName,
-        email: editFormData.email,
-        phoneNumber: editFormData.phoneNumber,
-        idNumber: editFormData.idNumber,
-        status: editFormData.status,
+        ...this.editFormData,
         updatedAt: new Date().toISOString()
       });
 
       await batch.commit();
 
-      setSnackbar({
+      this.snackbar = {
         open: true,
         message: 'User updated successfully',
         severity: 'success'
-      });
-      setEditDialogOpen(false);
+      };
+      this.editDialogOpen = false;
     } catch (error) {
       console.error('Error:', error);
-      setSnackbar({
+      this.snackbar = {
         open: true,
         message: 'Error updating user',
         severity: 'error'
-      });
+      };
     }
-  };
+  }
 
-  const handleDelete = async (userId) => {
+  handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
-        // First delete from Firestore
         await deleteDoc(doc(firestore, 'users', userId));
-
-        // Call a Cloud Function to delete the user from Authentication
         const deleteAuthUser = httpsCallable(functions, 'deleteAuthUser');
         await deleteAuthUser({ uid: userId });
 
-        setSnackbar({
+        this.snackbar = {
           open: true,
           message: 'User deleted successfully from both Database and Authentication',
           severity: 'success'
-        });
+        };
       } catch (error) {
         console.error('Error deleting user:', error);
-        setSnackbar({
+        this.snackbar = {
           open: true,
           message: 'Error deleting user: ' + error.message,
           severity: 'error'
-        });
+        };
       }
     }
-  };
+  }
 
-  const handleLogout = async () => {
+  handleLogout = async () => {
     try {
       await auth.signOut();
-      navigate('/login');
+      this._navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
-      setSnackbar({
+      this.snackbar = {
         open: true,
         message: 'Error signing out',
         severity: 'error'
-      });
+      };
     }
-  };
-
-  const filteredUsers = users.filter(user => {
-    if (statusFilter === 'all') return true;
-    return user.status === statusFilter;
-  });
-
-  const displayedUsers = filteredUsers
-    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
-      </Box>
-    );
   }
 
-  return (
-    <ThemeProvider theme={theme}>
-      <BackgroundContainer>
-        <StyledAppBar position="static">
-          <Toolbar sx={{ minHeight: '70px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-              <LogoImage src={wordLogo} alt="WILDCORE" />
+  get filteredUsers() {
+    return this.users.filter(user => {
+      if (this.statusFilter === 'all') return true;
+      return user.status === this.statusFilter;
+    });
+  }
+
+  get displayedUsers() {
+    return this.filteredUsers
+      .slice(this.page * this.rowsPerPage, this.page * this.rowsPerPage + this.rowsPerPage);
+  }
+
+  handleFilterSelect = (status) => {
+    this.statusFilter = status;
+    this.filterAnchorEl = null;
+    this.page = 0;
+  }
+
+  render() {
+    if (this.loading) {
+      return (
+        <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    return (
+      <ThemeProvider theme={theme}>
+        <BackgroundContainer>
+          <StyledAppBar position="static">
+            <Toolbar sx={{ minHeight: '70px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                <LogoImage src={wordLogo} alt="WILDCORE" />
+              </Box>
+              <Typography 
+                sx={{ 
+                  mr: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  fontWeight: 500
+                }}
+              >
+                Welcome, {this.adminName}
+              </Typography>
+              <Button 
+                color="inherit"
+                onClick={this.handleLogout}
+                sx={{ 
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                Logout
+              </Button>
+            </Toolbar>
+          </StyledAppBar>
+
+          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center',
+              mb: 4 
+            }}>
+              <Typography 
+                variant="h4" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 'bold',
+                  color: 'white',
+                  textAlign: 'center',
+                  mb: 3,
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+                }}
+              >
+                User Management
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Refresh">
+                  <IconButton 
+                    onClick={this.fetchUsers} 
+                    sx={{ 
+                      color: 'white',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                    }}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Filter">
+                  <IconButton 
+                    onClick={(e) => this.filterAnchorEl = e.currentTarget}
+                    sx={{ 
+                      color: 'white',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                    }}
+                  >
+                    <FilterListIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
-            <Typography 
-              sx={{ 
-                mr: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                fontWeight: 500
-              }}
-            >
-              Welcome, {adminName}
-            </Typography>
-            <Button 
-              color="inherit"
-              onClick={handleLogout}
-              sx={{ 
-                fontWeight: 'bold',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Logout
-            </Button>
-          </Toolbar>
-        </StyledAppBar>
 
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center',
-            mb: 4 
-          }}>
-            <Typography 
-              variant="h4" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 'bold',
-                color: 'white',
-                textAlign: 'center',
-                mb: 3,
-                textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-              }}
+            <Menu
+              anchorEl={this.filterAnchorEl}
+              open={Boolean(this.filterAnchorEl)}
+              onClose={() => this.filterAnchorEl = null}
             >
-              User Management
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Tooltip title="Refresh">
-                <IconButton 
-                  onClick={fetchUsers} 
-                  sx={{ 
-                    color: 'white',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-                  }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Filter">
-                <IconButton 
-                  onClick={(e) => setFilterAnchorEl(e.currentTarget)}
-                  sx={{ 
-                    color: 'white',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-                  }}
-                >
-                  <FilterListIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
+              <MenuItem onClick={() => this.handleFilterSelect('all')}>All Users</MenuItem>
+              <MenuItem onClick={() => this.handleFilterSelect('active')}>Active Users</MenuItem>
+              <MenuItem onClick={() => this.handleFilterSelect('inactive')}>Inactive Users</MenuItem>
+            </Menu>
 
-          <Menu
-            anchorEl={filterAnchorEl}
-            open={Boolean(filterAnchorEl)}
-            onClose={() => setFilterAnchorEl(null)}
-          >
-            <MenuItem onClick={() => { setStatusFilter('all'); setFilterAnchorEl(null); }}>
-              All Users
-            </MenuItem>
-            <MenuItem onClick={() => { setStatusFilter('active'); setFilterAnchorEl(null); }}>
-              Active Users
-            </MenuItem>
-            <MenuItem onClick={() => { setStatusFilter('inactive'); setFilterAnchorEl(null); }}>
-              Inactive Users
-            </MenuItem>
-          </Menu>
-
-          <StyledTableContainer component={Paper}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center" width="15%">ID Number</TableCell>
-                  <TableCell width="25%">Name</TableCell>
-                  <TableCell width="25%">Email</TableCell>
-                  <TableCell width="15%">Phone</TableCell>
-                  <TableCell align="center" width="10%">Status</TableCell>
-                  <TableCell align="center" width="10%">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell align="center">{user.idNumber}</TableCell>
-                    <TableCell>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column'
-                      }}>
-                        <Typography sx={{ fontWeight: 500 }}>
-                          {`${user.firstName} ${user.lastName}`}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phoneNumber}</TableCell>
-                    <TableCell align="center">
-                      <StyledChip
-                        label={user.status || 'active'}
-                        color={user.status || 'active'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                        <Tooltip title="Edit User" arrow>
-                          <ActionIconButton
-                            size="small"
-                            onClick={() => handleEditClick(user)}
-                            color="primary"
-                          >
-                            <EditIcon fontSize="small" />
-                          </ActionIconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete User" arrow>
-                          <ActionIconButton
-                            size="small"
-                            onClick={() => handleDelete(user.id)}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </ActionIconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
+            <StyledTableContainer component={Paper}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center" width="15%">ID Number</TableCell>
+                    <TableCell width="25%">Name</TableCell>
+                    <TableCell width="25%">Email</TableCell>
+                    <TableCell width="15%">Phone</TableCell>
+                    <TableCell align="center" width="10%">Status</TableCell>
+                    <TableCell align="center" width="10%">Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              component="div"
-              count={filteredUsers.length}
-              page={page}
-              onPageChange={(e, newPage) => setPage(newPage)}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[7, 14, 25]}
-              sx={{
-                '.MuiTablePagination-select': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  borderRadius: '8px',
-                  padding: '4px 8px',
-                },
-                '.MuiTablePagination-selectIcon': {
-                  color: theme.palette.primary.main
-                }
-              }}
-            />
-          </StyledTableContainer>
-        </Container>
+                </TableHead>
+                <TableBody>
+                  {this.displayedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell align="center">{user.idNumber}</TableCell>
+                      <TableCell>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column'
+                        }}>
+                          <Typography sx={{ fontWeight: 500 }}>
+                            {`${user.firstName} ${user.lastName}`}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.phoneNumber}</TableCell>
+                      <TableCell align="center">
+                        <StyledChip
+                          label={user.status || 'active'}
+                          color={user.status || 'active'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <Tooltip title="Edit User" arrow>
+                            <ActionIconButton
+                              size="small"
+                              onClick={() => this.handleEditClick(user)}
+                              color="primary"
+                            >
+                              <EditIcon fontSize="small" />
+                            </ActionIconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete User" arrow>
+                            <ActionIconButton
+                              size="small"
+                              onClick={() => this.handleDelete(user.id)}
+                              color="error"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </ActionIconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <TablePagination
+                component="div"
+                count={this.filteredUsers.length}
+                page={this.page}
+                onPageChange={(e, newPage) => this.page = newPage}
+                rowsPerPage={this.rowsPerPage}
+                onRowsPerPageChange={(e) => {
+                  this.rowsPerPage = parseInt(e.target.value, 10);
+                  this.page = 0;
+                }}
+                rowsPerPageOptions={[7, 14, 25]}
+                sx={{
+                  '.MuiTablePagination-select': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                  },
+                  '.MuiTablePagination-selectIcon': {
+                    color: theme.palette.primary.main
+                  }
+                }}
+              />
+            </StyledTableContainer>
+          </Container>
 
-        <Dialog 
-          open={editDialogOpen} 
-          onClose={() => setEditDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogContent>
-            <Box component="form" sx={{ mt: 2 }}>
-              <TextField
-                fullWidth
-                margin="dense"
-                label="First Name"
-                name="firstName"
-                value={editFormData.firstName}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  firstName: e.target.value
-                })}
-              />
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Last Name"
-                name="lastName"
-                value={editFormData.lastName}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  lastName: e.target.value
-                })}
-              />
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Email"
-                name="email"
-                value={editFormData.email}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  email: e.target.value
-                })}
-              />
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Phone Number"
-                name="phoneNumber"
-                value={editFormData.phoneNumber}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  phoneNumber: e.target.value
-                })}
-              />
-              <TextField
-                fullWidth
-                margin="dense"
-                label="ID Number"
-                name="idNumber"
-                value={editFormData.idNumber}
-                onChange={(e) => setEditFormData({
-                  ...editFormData,
-                  idNumber: e.target.value
-                })}
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleEdit} color="primary">Save</Button>
-          </DialogActions>
-        </Dialog>
-
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
-          <Alert
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            severity={snackbar.severity}
-            sx={{ width: '100%' }}
+          <Dialog 
+            open={this.editDialogOpen} 
+            onClose={() => this.editDialogOpen = false}
+            maxWidth="sm"
+            fullWidth
           >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </BackgroundContainer>
-    </ThemeProvider>
-  );
-};
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogContent>
+              <Box component="form" sx={{ mt: 2 }}>
+                <TextField
+                  fullWidth
+                  margin="dense"
+                  label="First Name"
+                  name="firstName"
+                  value={this.editFormData.firstName}
+                  onChange={(e) => this.editFormData = {
+                    ...this.editFormData,
+                    firstName: e.target.value
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  margin="dense"
+                  label="Last Name"
+                  name="lastName"
+                  value={this.editFormData.lastName}
+                  onChange={(e) => this.editFormData = {
+                    ...this.editFormData,
+                    lastName: e.target.value
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  margin="dense"
+                  label="Email"
+                  name="email"
+                  value={this.editFormData.email}
+                  onChange={(e) => this.editFormData = {
+                    ...this.editFormData,
+                    email: e.target.value
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  margin="dense"
+                  label="Phone Number"
+                  name="phoneNumber"
+                  value={this.editFormData.phoneNumber}
+                  onChange={(e) => this.editFormData = {
+                    ...this.editFormData,
+                    phoneNumber: e.target.value
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  margin="dense"
+                  label="ID Number"
+                  name="idNumber"
+                  value={this.editFormData.idNumber}
+                  onChange={(e) => this.editFormData = {
+                    ...this.editFormData,
+                    idNumber: e.target.value
+                  }}
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => this.editDialogOpen = false}>Cancel</Button>
+              <Button onClick={this.handleEdit} color="primary">Save</Button>
+            </DialogActions>
+          </Dialog>
 
-export default AdminDashboard; 
+          <Snackbar
+            open={this.snackbar.open}
+            autoHideDuration={6000}
+            onClose={() => this.snackbar = { ...this.snackbar, open: false }}
+          >
+            <Alert
+              onClose={() => this.snackbar = { ...this.snackbar, open: false }}
+              severity={this.snackbar.severity}
+              sx={{ width: '100%' }}
+            >
+              {this.snackbar.message}
+            </Alert>
+          </Snackbar>
+        </BackgroundContainer>
+      </ThemeProvider>
+    );
+  }
+}
+
+// Wrap with navigate
+export default (props) => {
+  const navigate = useNavigate();
+  return <AdminDashboard {...props} navigate={navigate} />;
+}; 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Component } from 'react';
 import { 
   Box, 
   TextField, 
@@ -100,232 +100,263 @@ const StyledButton = styled(Button)(({ theme }) => ({
   }
 }));
 
-const MAX_ATTEMPTS = 3;
-const LOCKOUT_TIME = 30;
-
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [attempts, setAttempts] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
-  const [lockoutTimer, setLockoutTimer] = useState(0);
-  const navigate = useNavigate();
-  const db = getFirestore();
-
-  useEffect(() => {
-    document.title = 'WildCore Account Management';
-    return () => {
-      document.title = 'WildCore';
+class Login extends Component {
+  constructor(props) {
+    super(props);
+    this._state = {
+      email: '',
+      password: '',
+      error: '',
+      attempts: 0,
+      isLocked: false,
+      lockoutTimer: 0
     };
-  }, []);
+    this._MAX_ATTEMPTS = 3;
+    this._LOCKOUT_TIME = 30;
+    this._db = getFirestore();
+    this._navigate = props.navigate;
+  }
 
-  const startLockoutTimer = () => {
-    setIsLocked(true);
-    setLockoutTimer(LOCKOUT_TIME);
+  // Getters
+  get email() { return this._state.email; }
+  get password() { return this._state.password; }
+  get error() { return this._state.error; }
+  get attempts() { return this._state.attempts; }
+  get isLocked() { return this._state.isLocked; }
+  get lockoutTimer() { return this._state.lockoutTimer; }
+
+  // Setters
+  set email(value) { 
+    this._state = { ...this._state, email: value };
+    this.forceUpdate();
+  }
+  set password(value) { 
+    this._state = { ...this._state, password: value };
+    this.forceUpdate();
+  }
+  set error(value) { 
+    this._state = { ...this._state, error: value };
+    this.forceUpdate();
+  }
+  set attempts(value) { 
+    this._state = { ...this._state, attempts: value };
+    this.forceUpdate();
+  }
+  set isLocked(value) { 
+    this._state = { ...this._state, isLocked: value };
+    this.forceUpdate();
+  }
+  set lockoutTimer(value) { 
+    this._state = { ...this._state, lockoutTimer: value };
+    this.forceUpdate();
+  }
+
+  startLockoutTimer = () => {
+    this.isLocked = true;
+    this.lockoutTimer = this._LOCKOUT_TIME;
     
     const timer = setInterval(() => {
-      setLockoutTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setIsLocked(false);
-          setAttempts(0);
-          return 0;
-        }
-        return prev - 1;
-      });
+      this.lockoutTimer = this.lockoutTimer <= 1 ? (() => {
+        clearInterval(timer);
+        this.isLocked = false;
+        this.attempts = 0;
+        return 0;
+      })() : this.lockoutTimer - 1;
     }, 1000);
-  };
+  }
 
-  const handleLogin = async (e) => {
+  handleLogin = async (e) => {
     e.preventDefault();
-
-    if (isLocked) {
-      return;
-    }
+    if (this.isLocked) return;
 
     try {
-      console.log('Attempting login with:', email);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, this.email, this.password);
       const user = userCredential.user;
-      console.log('User authenticated:', user.uid);
-
-      // Get user document from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      console.log('User data:', userDoc.data());
+      const userDoc = await getDoc(doc(this._db, 'users', user.uid));
 
       if (userDoc.exists() && userDoc.data().role === 'admin') {
-        console.log('Admin access granted');
-        setAttempts(0);
-        navigate('/admin-dashboard');
+        this.attempts = 0;
+        this._navigate('/admin-dashboard');
       } else {
-        console.log('Not an admin user - User data:', userDoc.data());
         await auth.signOut();
-        setAttempts(prev => prev + 1);
-        if (attempts + 1 >= MAX_ATTEMPTS) {
-          startLockoutTimer();
+        this.attempts++;
+        if (this.attempts >= this._MAX_ATTEMPTS) {
+          this.startLockoutTimer();
         }
-        setError('Access denied. Only administrators are allowed.');
+        this.error = 'Access denied. Only administrators are allowed.';
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setAttempts(prev => prev + 1);
-      if (attempts + 1 >= MAX_ATTEMPTS) {
-        startLockoutTimer();
+      this.attempts++;
+      if (this.attempts >= this._MAX_ATTEMPTS) {
+        this.startLockoutTimer();
       }
-      setError(error.message);
+      this.error = error.message;
     }
-  };
+  }
 
-  return (
-    <ThemeProvider theme={theme}>
-      <BackgroundContainer>
-        <StyledAppBar position="static" elevation={0}>
-          <Toolbar sx={{ minHeight: '64px' }}>
-            <Box sx={{ 
-              display: 'flex', 
+  componentDidMount() {
+    document.title = 'WildCore Account Management';
+  }
+
+  componentWillUnmount() {
+    document.title = 'WildCore';
+  }
+
+  render() {
+    return (
+      <ThemeProvider theme={theme}>
+        <BackgroundContainer>
+          <StyledAppBar position="static" elevation={0}>
+            <Toolbar sx={{ minHeight: '64px' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                flexGrow: 1 
+              }}>
+                <LogoImage src={wordLogo} alt="WILDCORE" />
+              </Box>
+            </Toolbar>
+          </StyledAppBar>
+
+          <Container 
+            component="main" 
+            maxWidth="xs" 
+            sx={{ 
+              position: 'relative', 
+              zIndex: 1,
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              flexGrow: 1 
-            }}>
-              <LogoImage src={wordLogo} alt="WILDCORE" />
-            </Box>
-          </Toolbar>
-        </StyledAppBar>
+              mt: 4
+            }}
+          >
+            <StyledPaper elevation={3}>
+              <Typography 
+                component="h1" 
+                variant="h4"
+                sx={{ 
+                  mb: 4,
+                  fontWeight: 800,
+                  background: 'linear-gradient(45deg, #800000, #FFD700)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.2)',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Admin Login
+              </Typography>
+              
+              {this.error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    width: '100%', 
+                    mb: 2,
+                    borderRadius: theme.shape.borderRadius 
+                  }}
+                >
+                  {this.error}
+                  {this.attempts > 0 && !this.isLocked && (
+                    <Typography variant="caption" display="block">
+                      Attempts remaining: {this._MAX_ATTEMPTS - this.attempts}
+                    </Typography>
+                  )}
+                </Alert>
+              )}
 
-        <Container 
-          component="main" 
-          maxWidth="xs" 
-          sx={{ 
-            position: 'relative', 
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mt: 4
-          }}
-        >
-          <StyledPaper elevation={3}>
-            <Typography 
-              component="h1" 
-              variant="h4"
-              sx={{ 
-                mb: 4,
-                fontWeight: 800,
-                background: 'linear-gradient(45deg, #800000, #FFD700)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.2)',
-                letterSpacing: '0.5px'
-              }}
-            >
-              Admin Login
-            </Typography>
-            
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  width: '100%', 
-                  mb: 2,
-                  borderRadius: theme.shape.borderRadius 
-                }}
+              {this.isLocked && (
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    width: '100%', 
+                    mb: 2,
+                    borderRadius: theme.shape.borderRadius 
+                  }}
+                >
+                  Too many failed attempts. Please wait {this.lockoutTimer} seconds before trying again.
+                </Alert>
+              )}
+              
+              <Box 
+                component="form" 
+                onSubmit={this.handleLogin} 
+                sx={{ width: '100%', mt: 2 }}
+                noValidate
               >
-                {error}
-                {attempts > 0 && !isLocked && (
-                  <Typography variant="caption" display="block">
-                    Attempts remaining: {MAX_ATTEMPTS - attempts}
-                  </Typography>
-                )}
-              </Alert>
-            )}
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  autoFocus
+                  value={this.email}
+                  onChange={(e) => this.email = e.target.value}
+                  disabled={this.isLocked}
+                  sx={{ mb: 2 }}
+                  error={!!this.error}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      document.getElementById('password').focus();
+                    }
+                  }}
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  value={this.password}
+                  onChange={(e) => this.password = e.target.value}
+                  disabled={this.isLocked}
+                  sx={{ mb: 3 }}
+                  error={!!this.error}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      this.handleLogin(e);
+                    }
+                  }}
+                />
+                <StyledButton
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  disabled={this.isLocked}
+                  sx={{ 
+                    mt: 3,
+                    py: 2,
+                    fontSize: '1.1rem',
+                    letterSpacing: '1px',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(128, 0, 0, 0.4)'
+                    }
+                  }}
+                >
+                  {this.isLocked ? `Wait ${this.lockoutTimer}s` : 'Sign In'}
+                </StyledButton>
+              </Box>
+            </StyledPaper>
+          </Container>
+        </BackgroundContainer>
+      </ThemeProvider>
+    );
+  }
+}
 
-            {isLocked && (
-              <Alert 
-                severity="warning" 
-                sx={{ 
-                  width: '100%', 
-                  mb: 2,
-                  borderRadius: theme.shape.borderRadius 
-                }}
-              >
-                Too many failed attempts. Please wait {lockoutTimer} seconds before trying again.
-              </Alert>
-            )}
-            
-            <Box 
-              component="form" 
-              onSubmit={handleLogin} 
-              sx={{ width: '100%', mt: 2 }}
-              noValidate
-            >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLocked}
-                sx={{ mb: 2 }}
-                error={!!error}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    document.getElementById('password').focus();
-                  }
-                }}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLocked}
-                sx={{ mb: 3 }}
-                error={!!error}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleLogin(e);
-                  }
-                }}
-              />
-              <StyledButton
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={isLocked}
-                sx={{ 
-                  mt: 3,
-                  py: 2,
-                  fontSize: '1.1rem',
-                  letterSpacing: '1px',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(128, 0, 0, 0.4)'
-                  }
-                }}
-              >
-                {isLocked ? `Wait ${lockoutTimer}s` : 'Sign In'}
-              </StyledButton>
-            </Box>
-          </StyledPaper>
-        </Container>
-      </BackgroundContainer>
-    </ThemeProvider>
-  );
+// Wrap with navigate
+export default (props) => {
+  const navigate = useNavigate();
+  return <Login {...props} navigate={navigate} />;
 };
-
-export default Login;

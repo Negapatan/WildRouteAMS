@@ -1,49 +1,76 @@
-import { useState, useEffect } from 'react';
+import React, { Component } from 'react';
 import { Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { CircularProgress, Box } from '@mui/material';
 import { auth, firestore } from '../firebase';
 
-const ProtectedRoute = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+class ProtectedRoute extends Component {
+  constructor(props) {
+    super(props);
+    this._state = {
+      isLoading: true,
+      isAdmin: false
+    };
+  }
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  // Getters
+  get isLoading() { return this._state.isLoading; }
+  get isAdmin() { return this._state.isAdmin; }
+
+  // Setters
+  set isLoading(value) {
+    this._state = { ...this._state, isLoading: value };
+    this.forceUpdate();
+  }
+  set isAdmin(value) {
+    this._state = { ...this._state, isAdmin: value };
+    this.forceUpdate();
+  }
+
+  componentDidMount() {
+    this.setupAuthListener();
+  }
+
+  setupAuthListener = () => {
+    return onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setIsAdmin(false);
-        setIsLoading(false);
+        this.isAdmin = false;
+        this.isLoading = false;
         return;
       }
 
       try {
-        // Check user role in Firestore
         const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-        setIsAdmin(userDoc.exists() && userDoc.data().role === 'admin');
+        this.isAdmin = userDoc.exists() && userDoc.data().role === 'admin';
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setIsAdmin(false);
+        this.isAdmin = false;
       }
-      setIsLoading(false);
+      this.isLoading = false;
     });
-
-    return () => unsubscribe();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/login" replace />;
-  }
+  render() {
+    if (this.isLoading) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh' 
+        }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
 
-  return children;
-};
+    if (!this.isAdmin) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return this.props.children;
+  }
+}
 
 export default ProtectedRoute; 
