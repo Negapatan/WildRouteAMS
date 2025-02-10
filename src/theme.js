@@ -17,6 +17,12 @@ const theme = createTheme({
       paper: '#ffffff',
     },
   },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+    },
+  },
   components: {
     MuiAppBar: {
       styleOverrides: {

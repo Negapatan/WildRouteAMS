@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   TextField, 
@@ -7,7 +7,6 @@ import {
   Container, 
   Alert,
   Paper,
-  useTheme,
   AppBar,
   Toolbar
 } from '@mui/material';
@@ -17,8 +16,38 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { ThemeProvider } from '@mui/material/styles';
-import { theme } from '../theme';
 import wordLogo from '../assets/wordlogo.png';
+import theme from '../theme';
+
+const BackgroundContainer = styled(Box)({
+  minHeight: '100vh',
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column',
+  '&::before': {
+    content: '""',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundImage: 'url(/src/assets/bg.jpg)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    filter: 'brightness(0.4) blur(8px)',
+    zIndex: -1
+  },
+  '&::after': {
+    content: '""',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: -1
+  }
+});
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   marginTop: theme.spacing(8),
@@ -26,9 +55,9 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  borderRadius: '15px',
-  boxShadow: '0 8px 32px rgba(128, 0, 0, 0.2)',
-  background: 'rgba(255, 255, 255, 0.85)',
+  borderRadius: '20px',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+  background: 'rgba(255, 255, 255, 0.95)',
   backdropFilter: 'blur(12px)',
   position: 'relative',
   zIndex: 1,
@@ -43,12 +72,17 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   background: 'linear-gradient(45deg, #800000 30%, #a31545 90%)',
   boxShadow: '0 3px 5px 2px rgba(128, 0, 0, .3)',
+  height: '64px',
 }));
 
 const LogoImage = styled('img')({
-  height: '35px',
+  height: '50px',
   width: 'auto',
-  marginLeft: '10px'
+  marginLeft: '20px',
+  transition: 'transform 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.05)'
+  }
 });
 
 const StyledButton = styled(Button)(({ theme }) => ({
@@ -77,8 +111,14 @@ const Login = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTimer, setLockoutTimer] = useState(0);
   const navigate = useNavigate();
-  const theme = useTheme();
   const db = getFirestore();
+
+  useEffect(() => {
+    document.title = 'WildCore Account Management';
+    return () => {
+      document.title = 'WildCore';
+    };
+  }, []);
 
   const startLockoutTimer = () => {
     setIsLocked(true);
@@ -139,36 +179,15 @@ const Login = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        minHeight: '100vh',
-        position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backdropFilter: 'blur(8px)',
-          zIndex: 0
-        }
-      }}>
+      <BackgroundContainer>
         <StyledAppBar position="static" elevation={0}>
-          <Toolbar>
+          <Toolbar sx={{ minHeight: '64px' }}>
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
               flexGrow: 1 
             }}>
-              <LogoImage 
-                src={wordLogo} 
-                alt="WILDCORE" 
-                sx={{ 
-                  height: '35px'
-                }}
-              />
+              <LogoImage src={wordLogo} alt="WILDCORE" />
             </Box>
           </Toolbar>
         </StyledAppBar>
@@ -182,7 +201,7 @@ const Login = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            mt: -4
+            mt: 4
           }}
         >
           <StyledPaper elevation={3}>
@@ -236,10 +255,8 @@ const Login = () => {
             <Box 
               component="form" 
               onSubmit={handleLogin} 
-              sx={{ 
-                width: '100%',
-                mt: 2
-              }}
+              sx={{ width: '100%', mt: 2 }}
+              noValidate
             >
               <TextField
                 margin="normal"
@@ -254,6 +271,13 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLocked}
                 sx={{ mb: 2 }}
+                error={!!error}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('password').focus();
+                  }
+                }}
               />
               <TextField
                 margin="normal"
@@ -268,6 +292,13 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLocked}
                 sx={{ mb: 3 }}
+                error={!!error}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLogin(e);
+                  }
+                }}
               />
               <StyledButton
                 type="submit"
@@ -287,12 +318,12 @@ const Login = () => {
                   }
                 }}
               >
-                Sign In
+                {isLocked ? `Wait ${lockoutTimer}s` : 'Sign In'}
               </StyledButton>
             </Box>
           </StyledPaper>
         </Container>
-      </Box>
+      </BackgroundContainer>
     </ThemeProvider>
   );
 };
