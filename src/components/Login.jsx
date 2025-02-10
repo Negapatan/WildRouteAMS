@@ -195,11 +195,11 @@ class Login extends Component {
   }
 
   componentDidMount() {
-    document.title = 'WildCore Account Management';
+    document.title = 'CIT WildCore Account Management';
   }
 
   componentWillUnmount() {
-    document.title = 'WildCore';
+    document.title = 'CIT WildCore';
   }
 
   render() {

@@ -1,24 +1,16 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import AdminDashboard from './components/AdminDashboard';
-import ProtectedRoute from './components/ProtectedRoute';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import AnimatedRoutes from './components/AnimatedRoutes';
+import { setFavicon } from './utils/favicon';
 
 function App() {
+  useEffect(() => {
+    setFavicon();
+  }, []);
+
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/admin-dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+      <AnimatedRoutes />
     </Router>
   );
 }
