@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  AppBar,
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  AppBar, 
   Toolbar,
   Container,
   Paper,
@@ -26,20 +26,19 @@ import {
   CircularProgress,
   Menu,
   MenuItem,
-  Tooltip
+  Tooltip,
+  Autocomplete
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { auth, firestore, functions } from '../firebase';
-import { collection, onSnapshot, query, doc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, deleteDoc, getDoc, writeBatch, where, updateDoc } from 'firebase/firestore';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '../theme';
 import wordLogo from '../assets/wordlogo.png';
-import { httpsCallable } from 'firebase/functions';
+import { COLLEGES } from '../utils/collegePrograms';
 
 const BackgroundContainer = styled(Box)({
   minHeight: '100vh',
@@ -88,40 +87,79 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   marginTop: theme.spacing(3),
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
   borderRadius: '20px',
-  background: 'rgba(255, 255, 255, 0.98)',
-  backdropFilter: 'blur(12px)',
-  overflow: 'hidden',
-  '& .MuiTableCell-head': {
-    backgroundColor: theme.palette.primary.main,
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: '0.95rem',
+  background: '#ffffff',
+  overflow: 'auto',
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  maxHeight: 'calc(100vh - 200px)',
+  '& .MuiTable-root': {
+    minWidth: '1000px',
+    tableLayout: 'auto',
+  },
+  '& .MuiTableHead-root': {
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
+  },
+  '& .MuiTableCell-root': {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
     padding: '16px',
-    borderBottom: 'none',
+    borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
+  },
+  '& .MuiTableCell-head': {
+    backgroundColor: '#800000',
+    color: 'white',
+    fontWeight: 600,
+    fontSize: '0.9rem',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px'
+    letterSpacing: '0.5px',
+    borderBottom: 'none',
+    padding: '20px 16px',
   },
   '& .MuiTableCell-body': {
     fontSize: '0.9rem',
-    padding: '16px',
-    color: theme.palette.text.primary
+    color: '#333333',
+    backgroundColor: '#ffffff',
   },
   '& .MuiTableRow-root': {
     transition: 'all 0.2s ease',
+    backgroundColor: '#ffffff',
+    '&:nth-of-type(odd)': {
+      backgroundColor: '#fafafa',
+    },
     '&:hover': {
-      backgroundColor: 'rgba(255, 215, 0, 0.05)',
-      transform: 'translateY(-1px)',
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.05)'
+      backgroundColor: '#f5f5f5',
     }
   },
   '& .MuiTablePagination-root': {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTop: '1px solid rgba(224, 224, 224, 0.5)'
+    backgroundColor: '#ffffff',
+    borderTop: '1px solid rgba(224, 224, 224, 1)',
+    position: 'sticky',
+    bottom: 0,
+    zIndex: 2
+  },
+  '&::-webkit-scrollbar': {
+    width: '8px',
+    height: '8px'
+  },
+  '&::-webkit-scrollbar-track': {
+    background: '#f1f1f1',
+    borderRadius: '4px'
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#888',
+    borderRadius: '4px',
+    '&:hover': {
+      background: '#666'
+    }
   }
 }));
 
 const StyledChip = styled(Chip)(({ theme, color }) => ({
-  fontWeight: 'bold',
+  fontWeight: 500,
   color: 'white',
   padding: '0 8px',
   height: '24px',
@@ -129,20 +167,18 @@ const StyledChip = styled(Chip)(({ theme, color }) => ({
   fontSize: '0.75rem',
   textTransform: 'capitalize',
   backgroundColor: 
-    color === 'active' ? theme.palette.success.main :
-    color === 'inactive' ? theme.palette.error.main :
-    theme.palette.warning.main,
-  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    color === 'active' ? '#2e7d32' :
+    color === 'inactive' ? '#d32f2f' :
+    '#ed6c02',
+  boxShadow: 'none'
 }));
 
 const ActionIconButton = styled(IconButton)(({ theme }) => ({
   padding: '6px',
   marginRight: '4px',
-  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  backgroundColor: 'transparent',
   '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 1)',
-    transform: 'translateY(-1px)',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    backgroundColor: theme.palette.action.hover,
   }
 }));
 
@@ -171,6 +207,37 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   }
 }));
 
+const ViewToggleButton = styled(Button)(({ theme, isActive }) => ({
+  backgroundColor: isActive ? theme.palette.primary.main : '#ffffff',
+  color: isActive ? '#ffffff' : theme.palette.primary.main,
+  fontWeight: 600,
+  padding: '10px 32px',
+  borderRadius: '8px',
+  border: `2px solid ${theme.palette.primary.main}`,
+  boxShadow: isActive ? '0 4px 12px rgba(128,0,0,0.2)' : 'none',
+  '&:hover': {
+    backgroundColor: isActive ? theme.palette.primary.dark : theme.palette.primary.light,
+    color: '#ffffff',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(128,0,0,0.3)',
+  },
+  transition: 'all 0.2s ease'
+}));
+
+const ActionButton = styled(IconButton)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  color: theme.palette.primary.main,
+  padding: '8px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  '&:hover': {
+    backgroundColor: theme.palette.primary.main,
+    color: '#ffffff',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(128,0,0,0.2)',
+  },
+  transition: 'all 0.2s ease'
+}));
+
 class AdminDashboard extends Component {
   constructor(props) {
     super(props);
@@ -179,13 +246,14 @@ class AdminDashboard extends Component {
       adminName: '',
       editDialogOpen: false,
       editFormData: {
-        id: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
+    id: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
         idNumber: '',
-        status: ''
+        status: '',
+        college: '',
       },
       snackbar: { 
         open: false, 
@@ -197,7 +265,11 @@ class AdminDashboard extends Component {
       rowsPerPage: 7,
       filterAnchorEl: null,
       statusFilter: 'all',
-      logoutDialogOpen: false
+      logoutDialogOpen: false,
+      viewMode: 'admin',
+      instructors: [],
+      deleteDialogOpen: false,
+      userToDelete: null,
     };
     this._navigate = props.navigate;
   }
@@ -214,6 +286,10 @@ class AdminDashboard extends Component {
   get filterAnchorEl() { return this._state.filterAnchorEl; }
   get statusFilter() { return this._state.statusFilter; }
   get logoutDialogOpen() { return this._state.logoutDialogOpen; }
+  get viewMode() { return this._state.viewMode; }
+  get instructors() { return this._state.instructors; }
+  get deleteDialogOpen() { return this._state.deleteDialogOpen; }
+  get userToDelete() { return this._state.userToDelete; }
 
   // Setters
   set users(value) {
@@ -260,6 +336,22 @@ class AdminDashboard extends Component {
     this._state = { ...this._state, logoutDialogOpen: value };
     this.forceUpdate();
   }
+  set viewMode(value) {
+    this._state = { ...this._state, viewMode: value };
+    this.forceUpdate();
+  }
+  set instructors(value) {
+    this._state = { ...this._state, instructors: value };
+    this.forceUpdate();
+  }
+  set deleteDialogOpen(value) {
+    this._state = { ...this._state, deleteDialogOpen: value };
+    this.forceUpdate();
+  }
+  set userToDelete(value) {
+    this._state = { ...this._state, userToDelete: value };
+    this.forceUpdate();
+  }
 
   componentDidMount() {
     this.setupAuthListener();
@@ -298,21 +390,27 @@ class AdminDashboard extends Component {
   fetchUsers = async () => {
     try {
       this.loading = true;
-      const usersQuery = query(collection(firestore, 'users'));
+      const usersQuery = query(
+        collection(firestore, 'users'),
+        where('role', 'in', ['admin', 'instructor'])
+      );
+      
       onSnapshot(usersQuery, (snapshot) => {
-        const usersList = snapshot.docs.map(doc => ({
+        const allUsers = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        this.users = usersList;
+        
+        this.users = allUsers.filter(user => user.role === 'admin');
+        this.instructors = allUsers.filter(user => user.role === 'instructor');
         this.loading = false;
       });
     } catch (error) {
       console.error('Error fetching users:', error);
       this.snackbar = {
-        open: true,
+          open: true,
         message: 'Error loading users',
-        severity: 'error'
+          severity: 'error'
       };
       this.loading = false;
     }
@@ -326,31 +424,32 @@ class AdminDashboard extends Component {
       email: user.email || '',
       phoneNumber: user.phoneNumber || '',
       idNumber: user.idNumber || '',
-      status: user.status || 'active'
+      status: user.status || 'active',
+      college: user.college || '',
     };
     this.editDialogOpen = true;
   }
 
   handleEdit = async () => {
     try {
-      const batch = writeBatch(firestore);
-      
       const userRef = doc(firestore, 'users', this.editFormData.id);
-      batch.update(userRef, {
-        ...this.editFormData,
-        updatedAt: new Date().toISOString()
+      await updateDoc(userRef, {
+        firstName: this.editFormData.firstName,
+        lastName: this.editFormData.lastName,
+        email: this.editFormData.email,
+        phoneNumber: this.editFormData.phoneNumber,
+        idNumber: this.editFormData.idNumber,
+        status: this.editFormData.status,
+        college: this.editFormData.college,
       });
-
-      await batch.commit();
-
+      this.editDialogOpen = false;
       this.snackbar = {
         open: true,
         message: 'User updated successfully',
         severity: 'success'
       };
-      this.editDialogOpen = false;
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error updating user:', error);
       this.snackbar = {
         open: true,
         message: 'Error updating user',
@@ -359,26 +458,46 @@ class AdminDashboard extends Component {
     }
   }
 
-  handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        await deleteDoc(doc(firestore, 'users', userId));
-        const deleteAuthUser = httpsCallable(functions, 'deleteAuthUser');
-        await deleteAuthUser({ uid: userId });
+  handleDelete = (user) => {
+    this.userToDelete = user;
+    this.deleteDialogOpen = true;
+  }
 
-        this.snackbar = {
-          open: true,
-          message: 'User deleted successfully from both Database and Authentication',
-          severity: 'success'
-        };
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        this.snackbar = {
-          open: true,
-          message: 'Error deleting user: ' + error.message,
-          severity: 'error'
-        };
+  handleDeleteConfirm = async () => {
+    try {
+      this.loading = true;
+      const userId = this.userToDelete.id;
+
+      // Delete only from Firestore
+      await deleteDoc(doc(firestore, 'users', userId));
+
+      this.snackbar = {
+        open: true,
+        message: 'User deleted successfully from database',
+        severity: 'success'
+      };
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      
+      let errorMessage = 'An error occurred while deleting the user';
+      
+      if (error.code === 'not-found') {
+        errorMessage = 'User not found. They may have already been deleted.';
+      } else if (error.code === 'permission-denied') {
+        errorMessage = 'You do not have permission to delete this user.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+
+      this.snackbar = {
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      };
+    } finally {
+      this.loading = false;
+      this.deleteDialogOpen = false;
+      this.userToDelete = null;
     }
   }
 
@@ -413,7 +532,12 @@ class AdminDashboard extends Component {
   }
 
   get displayedUsers() {
-    return this.filteredUsers
+    const users = this.viewMode === 'admin' ? this.users : this.instructors;
+    return users
+      .filter(user => {
+        if (this.statusFilter === 'all') return true;
+        return user.status === this.statusFilter;
+      })
       .slice(this.page * this.rowsPerPage, this.page * this.rowsPerPage + this.rowsPerPage);
   }
 
@@ -432,8 +556,8 @@ class AdminDashboard extends Component {
       );
     }
 
-    return (
-      <ThemeProvider theme={theme}>
+  return (
+    <ThemeProvider theme={theme}>
         <BackgroundContainer>
           <StyledAppBar position="static">
             <Toolbar sx={{ minHeight: '70px' }}>
@@ -443,8 +567,8 @@ class AdminDashboard extends Component {
               <Typography 
                 sx={{ 
                   mr: 2,
-                  display: 'flex',
-                  alignItems: 'center',
+              display: 'flex', 
+              alignItems: 'center',
                   gap: 1,
                   fontWeight: 500
                 }}
@@ -458,56 +582,53 @@ class AdminDashboard extends Component {
                   fontWeight: 'bold',
                   '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
                 }}
-              >
-                Logout
+            >
+              Logout
               </Button>
-            </Toolbar>
-          </StyledAppBar>
+          </Toolbar>
+        </StyledAppBar>
 
-          <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Container maxWidth="xl" sx={{ 
+            height: 'calc(100vh - 64px)',
+            pt: 3,
+            pb: 3,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
             <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column',
+            display: 'flex',
+            flexDirection: 'column',
               alignItems: 'center',
               mb: 4 
             }}>
-              <Typography 
-                variant="h4" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 'bold',
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 'bold',
                   color: 'white',
                   textAlign: 'center',
                   mb: 3,
                   textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-                }}
+            }}
+          >
+            User Management
+          </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'center' }}>
+              <ViewToggleButton
+                isActive={this.viewMode === 'admin'}
+                onClick={() => this.viewMode = 'admin'}
               >
-                User Management
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Tooltip title="Refresh">
-                  <IconButton 
-                    onClick={this.fetchUsers} 
-                    sx={{ 
-                      color: 'white',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-                    }}
-                  >
-                    <RefreshIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Filter">
-                  <IconButton 
-                    onClick={(e) => this.filterAnchorEl = e.currentTarget}
-                    sx={{ 
-                      color: 'white',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-                    }}
-                  >
-                    <FilterListIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+                Admins
+              </ViewToggleButton>
+              <ViewToggleButton
+                isActive={this.viewMode === 'instructor'}
+                onClick={() => this.viewMode = 'instructor'}
+              >
+                Instructors
+              </ViewToggleButton>
             </Box>
 
             <Menu
@@ -524,30 +645,111 @@ class AdminDashboard extends Component {
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center" width="15%">ID Number</TableCell>
-                    <TableCell width="25%">Name</TableCell>
-                    <TableCell width="25%">Email</TableCell>
-                    <TableCell width="15%">Phone</TableCell>
-                    <TableCell align="center" width="10%">Status</TableCell>
-                    <TableCell align="center" width="10%">Actions</TableCell>
+                    <TableCell 
+                      align="center" 
+                      sx={{ 
+                        minWidth: '120px',
+                        maxWidth: '150px'
+                      }}
+                    >
+                      ID Number
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        minWidth: '180px',
+                        maxWidth: '250px'
+                      }}
+                    >
+                      Name
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        minWidth: '200px',
+                        maxWidth: '300px'
+                      }}
+                    >
+                      Email
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        minWidth: '120px',
+                        maxWidth: '150px'
+                      }}
+                    >
+                      Phone
+                    </TableCell>
+                    {this.viewMode === 'instructor' && (
+                      <TableCell 
+                        sx={{ 
+                          minWidth: '180px',
+                          maxWidth: '250px'
+                        }}
+                      >
+                        College
+                      </TableCell>
+                    )}
+                    <TableCell 
+                      align="center" 
+                      sx={{ 
+                        minWidth: '100px',
+                        maxWidth: '120px'
+                      }}
+                    >
+                      Status
+                    </TableCell>
+                    <TableCell 
+                      align="center" 
+                      sx={{ 
+                        minWidth: '100px',
+                        maxWidth: '120px'
+                      }}
+                    >
+                      Actions
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {this.displayedUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell align="center">{user.idNumber}</TableCell>
-                      <TableCell>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'column'
-                        }}>
-                          <Typography sx={{ fontWeight: 500 }}>
-                            {`${user.firstName} ${user.lastName}`}
-                          </Typography>
-                        </Box>
+                      <TableRow key={user.id}>
+                      <TableCell align="center">
+                        <Tooltip title={user.idNumber} arrow placement="top">
+                          <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {user.idNumber}
+                          </Box>
+                        </Tooltip>
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phoneNumber}</TableCell>
+                        <TableCell>
+                        <Tooltip title={`${user.firstName} ${user.lastName}`} arrow placement="top">
+                          <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Typography sx={{ fontWeight: 500 }}>
+                          {`${user.firstName} ${user.lastName}`}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={user.email} arrow placement="top">
+                          <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {user.email}
+                          </Box>
+                        </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                        <Tooltip title={user.phoneNumber} arrow placement="top">
+                          <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {user.phoneNumber}
+                          </Box>
+                        </Tooltip>
+                        </TableCell>
+                      {this.viewMode === 'instructor' && (
+                        <TableCell>
+                          <Tooltip title={user.college || 'Not set'} arrow placement="top">
+                            <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {user.college || 'Not set'}
+                            </Box>
+                          </Tooltip>
+                        </TableCell>
+                      )}
                       <TableCell align="center">
                         <StyledChip
                           label={user.status || 'active'}
@@ -561,7 +763,7 @@ class AdminDashboard extends Component {
                             <ActionIconButton
                               size="small"
                               onClick={() => this.handleEditClick(user)}
-                              color="primary"
+                            color="primary"
                             >
                               <EditIcon fontSize="small" />
                             </ActionIconButton>
@@ -569,10 +771,15 @@ class AdminDashboard extends Component {
                           <Tooltip title="Delete User" arrow>
                             <ActionIconButton
                               size="small"
-                              onClick={() => this.handleDelete(user.id)}
+                              onClick={() => this.handleDelete(user)}
                               color="error"
+                              disabled={this.loading}
                             >
-                              <DeleteIcon fontSize="small" />
+                              {this.loading ? (
+                                <CircularProgress size={20} color="error" />
+                              ) : (
+                                <DeleteIcon fontSize="small" />
+                              )}
                             </ActionIconButton>
                           </Tooltip>
                         </Box>
@@ -581,8 +788,8 @@ class AdminDashboard extends Component {
                   ))}
                 </TableBody>
               </Table>
-              <TablePagination
-                component="div"
+            <TablePagination
+              component="div"
                 count={this.filteredUsers.length}
                 page={this.page}
                 onPageChange={(e, newPage) => this.page = newPage}
@@ -592,105 +799,140 @@ class AdminDashboard extends Component {
                   this.page = 0;
                 }}
                 rowsPerPageOptions={[7, 14, 25]}
-                sx={{
+              sx={{
                   '.MuiTablePagination-select': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
                     borderRadius: '8px',
                     padding: '4px 8px',
                   },
                   '.MuiTablePagination-selectIcon': {
                     color: theme.palette.primary.main
                   }
-                }}
-              />
-            </StyledTableContainer>
-          </Container>
+              }}
+            />
+          </StyledTableContainer>
+        </Container>
 
-          <Dialog 
+        <Dialog 
             open={this.editDialogOpen} 
             onClose={() => this.editDialogOpen = false}
             maxWidth="sm"
             fullWidth
-          >
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogContent>
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                backgroundColor: '#ffffff',
+                overflow: 'hidden'
+              }
+            }}
+        >
+          <DialogTitle sx={{ 
+            borderBottom: '1px solid rgba(0,0,0,0.1)',
+            backgroundColor: '#ffffff',
+            pb: 2 
+          }}>
+            Edit User
+          </DialogTitle>
+          <DialogContent>
               <Box component="form" sx={{ mt: 2 }}>
-                <TextField
-                  fullWidth
-                  margin="dense"
-                  label="First Name"
-                  name="firstName"
+              <TextField
+                fullWidth
+                margin="dense"
+                label="First Name"
+                name="firstName"
                   value={this.editFormData.firstName}
                   onChange={(e) => this.editFormData = {
                     ...this.editFormData,
                     firstName: e.target.value
                   }}
-                />
-                <TextField
-                  fullWidth
-                  margin="dense"
-                  label="Last Name"
-                  name="lastName"
+              />
+              <TextField
+                fullWidth
+                margin="dense"
+                label="Last Name"
+                name="lastName"
                   value={this.editFormData.lastName}
                   onChange={(e) => this.editFormData = {
                     ...this.editFormData,
                     lastName: e.target.value
                   }}
-                />
-                <TextField
-                  fullWidth
-                  margin="dense"
-                  label="Email"
-                  name="email"
+              />
+              <TextField
+                fullWidth
+                margin="dense"
+                label="Email"
+                name="email"
                   value={this.editFormData.email}
                   onChange={(e) => this.editFormData = {
                     ...this.editFormData,
                     email: e.target.value
                   }}
-                />
-                <TextField
-                  fullWidth
-                  margin="dense"
-                  label="Phone Number"
-                  name="phoneNumber"
+              />
+              <TextField
+                fullWidth
+                margin="dense"
+                label="Phone Number"
+                name="phoneNumber"
                   value={this.editFormData.phoneNumber}
                   onChange={(e) => this.editFormData = {
                     ...this.editFormData,
                     phoneNumber: e.target.value
                   }}
-                />
-                <TextField
-                  fullWidth
-                  margin="dense"
-                  label="ID Number"
-                  name="idNumber"
+              />
+              <TextField
+                fullWidth
+                margin="dense"
+                label="ID Number"
+                name="idNumber"
                   value={this.editFormData.idNumber}
                   onChange={(e) => this.editFormData = {
                     ...this.editFormData,
                     idNumber: e.target.value
                   }}
                 />
-              </Box>
-            </DialogContent>
-            <DialogActions>
+                {this.viewMode === 'instructor' && (
+                  <Autocomplete
+                    fullWidth
+                    options={Object.keys(COLLEGES)}
+                    value={this.editFormData.college || null}
+                    onChange={(e, newValue) => this.editFormData = {
+                      ...this.editFormData,
+                      college: newValue
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        margin="dense"
+                        label="College"
+                        name="college"
+                        fullWidth
+                      />
+                    )}
+                    sx={{ mt: 1 }}
+                  />
+                )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
               <Button onClick={() => this.editDialogOpen = false}>Cancel</Button>
               <Button onClick={this.handleEdit} color="primary">Save</Button>
-            </DialogActions>
-          </Dialog>
+          </DialogActions>
+        </Dialog>
 
-          <Snackbar
+        <Snackbar 
             open={this.snackbar.open}
-            autoHideDuration={6000}
+          autoHideDuration={6000} 
             onClose={() => this.snackbar = { ...this.snackbar, open: false }}
-          >
-            <Alert
+        >
+          <Alert 
               onClose={() => this.snackbar = { ...this.snackbar, open: false }}
               severity={this.snackbar.severity}
-              sx={{ width: '100%' }}
-            >
+            sx={{ width: '100%' }}
+          >
               {this.snackbar.message}
-            </Alert>
-          </Snackbar>
+          </Alert>
+        </Snackbar>
 
           <StyledDialog
             open={this.logoutDialogOpen}
@@ -712,14 +954,12 @@ class AdminDashboard extends Component {
                 boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
                 minWidth: '300px',
                 overflow: 'hidden',
-                backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                backdropFilter: 'blur(10px)',
+                backgroundColor: '#ffffff',
               }
             }}
             BackdropProps={{
               sx: {
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                backdropFilter: 'blur(4px)'
+                backgroundColor: 'rgba(0, 0, 0, 0.5)'
               }
             }}
           >
@@ -728,8 +968,7 @@ class AdminDashboard extends Component {
                 borderBottom: '1px solid rgba(0,0,0,0.1)',
                 pb: 2,
                 fontWeight: 600,
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(10px)'
+                backgroundColor: '#ffffff',
               }}
             >
               Confirm Logout
@@ -738,7 +977,8 @@ class AdminDashboard extends Component {
               py: 3,
               px: 3,
               typography: 'body1',
-              color: 'text.secondary'
+              color: 'text.secondary',
+              backgroundColor: '#ffffff'
             }}>
               Are you sure you want to log out of the admin dashboard?
             </DialogContent>
@@ -747,8 +987,7 @@ class AdminDashboard extends Component {
               pb: 3,
               borderTop: '1px solid rgba(0,0,0,0.1)',
               pt: 2,
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(10px)'
+              backgroundColor: '#ffffff',
             }}>
               <Button 
                 onClick={this.handleLogoutCancel}
@@ -786,9 +1025,89 @@ class AdminDashboard extends Component {
               </Button>
             </DialogActions>
           </StyledDialog>
+
+          <StyledDialog
+            open={this.deleteDialogOpen}
+            onClose={() => {
+              this.deleteDialogOpen = false;
+              this.userToDelete = null;
+            }}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                backgroundColor: '#ffffff',
+                overflow: 'hidden'
+              }
+            }}
+          >
+            <DialogTitle sx={{ 
+              borderBottom: '1px solid rgba(0,0,0,0.1)',
+              backgroundColor: '#ffffff',
+              pb: 2,
+              color: theme.palette.error.main,
+              fontWeight: 600
+            }}>
+              Confirm Delete
+            </DialogTitle>
+            <DialogContent sx={{ 
+              py: 3,
+              px: 3,
+              backgroundColor: '#ffffff'
+            }}>
+              <Typography>
+                Are you sure you want to delete this user?
+                {this.userToDelete && (
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {` ${this.userToDelete.firstName} ${this.userToDelete.lastName}`}
+                  </Box>
+                )}
+              </Typography>
+              <Typography sx={{ mt: 2, color: 'text.secondary', fontSize: '0.9rem' }}>
+                This action cannot be undone. The user will be removed from the database.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ 
+              px: 3, 
+              pb: 3,
+              borderTop: '1px solid rgba(0,0,0,0.1)',
+              pt: 2,
+              backgroundColor: '#ffffff',
+            }}>
+              <Button 
+                onClick={() => {
+                  this.deleteDialogOpen = false;
+                  this.userToDelete = null;
+                }}
+                sx={{ 
+                  color: 'text.secondary',
+                  '&:hover': { backgroundColor: 'rgba(0,0,0,0.05)' }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={this.handleDeleteConfirm}
+                variant="contained"
+                color="error"
+                disabled={this.loading}
+                sx={{ 
+                  ml: 1,
+                  px: 3,
+                  '&:hover': { backgroundColor: theme.palette.error.dark }
+                }}
+              >
+                {this.loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogActions>
+          </StyledDialog>
         </BackgroundContainer>
-      </ThemeProvider>
-    );
+    </ThemeProvider>
+  );
   }
 }
 
