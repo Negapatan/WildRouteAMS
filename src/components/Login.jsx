@@ -8,7 +8,8 @@ import {
   Alert,
   Paper,
   AppBar,
-  Toolbar
+  Toolbar,
+  CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -85,28 +86,29 @@ const LogoImage = styled('img')({
   }
 });
 
-const StyledButton = styled(Button)(({ theme }) => ({
-  background: 'linear-gradient(45deg, #800000 0%, #FFD700 100%)',
-  border: 0,
-  color: '#ffffff',
-  fontWeight: 'bold',
-  padding: '12px',
-  boxShadow: '0 3px 5px 2px rgba(128, 0, 0, 0.3)',
-  '&:hover': {
-    background: 'linear-gradient(45deg, #FFD700 0%, #800000 100%)',
-  },
-  '&:disabled': {
-    background: 'linear-gradient(45deg, #666666 0%, #999999 100%)',
-  }
-}));
+// const StyledButton = styled(Button)(({ theme }) => ({
+//   background: 'linear-gradient(45deg, #800000 0%, #FFD700 100%)',
+//   border: 0,
+//   color: '#ffffff',
+//   fontWeight: 'bold',
+//   padding: '12px',
+//   boxShadow: '0 3px 5px 2px rgba(128, 0, 0, 0.3)',
+//   '&:hover': {
+//     background: 'linear-gradient(45deg, #FFD700 0%, #800000 100%)',
+//   },
+//   '&:disabled': {
+//     background: 'linear-gradient(45deg, #666666 0%, #999999 100%)',
+//   }
+// }));
 
 class Login extends Component {
   constructor(props) {
     super(props);
-    this._state = {
+    this.state = {
       email: '',
       password: '',
-      error: '',
+      error: null,
+      loading: false,
       attempts: 0,
       isLocked: false,
       lockoutTimer: 0
@@ -118,37 +120,31 @@ class Login extends Component {
   }
 
   // Getters
-  get email() { return this._state.email; }
-  get password() { return this._state.password; }
-  get error() { return this._state.error; }
-  get attempts() { return this._state.attempts; }
-  get isLocked() { return this._state.isLocked; }
-  get lockoutTimer() { return this._state.lockoutTimer; }
+  get email() { return this.state.email; }
+  get password() { return this.state.password; }
+  get error() { return this.state.error; }
+  get attempts() { return this.state.attempts; }
+  get isLocked() { return this.state.isLocked; }
+  get lockoutTimer() { return this.state.lockoutTimer; }
 
   // Setters
   set email(value) { 
-    this._state = { ...this._state, email: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, email: value });
   }
   set password(value) { 
-    this._state = { ...this._state, password: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, password: value });
   }
   set error(value) { 
-    this._state = { ...this._state, error: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, error: value });
   }
   set attempts(value) { 
-    this._state = { ...this._state, attempts: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, attempts: value });
   }
   set isLocked(value) { 
-    this._state = { ...this._state, isLocked: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, isLocked: value });
   }
   set lockoutTimer(value) { 
-    this._state = { ...this._state, lockoutTimer: value };
-    this.forceUpdate();
+    this.setState({ ...this.state, lockoutTimer: value });
   }
 
   startLockoutTimer = () => {
@@ -168,6 +164,8 @@ class Login extends Component {
   handleLogin = async (e) => {
     e.preventDefault();
     if (this.isLocked) return;
+
+    this.setState({ error: null, loading: true });
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, this.email, this.password);
@@ -191,6 +189,8 @@ class Login extends Component {
         this.startLockoutTimer();
       }
       this.error = error.message;
+    } finally {
+      this.setState({ loading: false });
     }
   }
 
@@ -326,26 +326,34 @@ class Login extends Component {
                     }
                   }}
                 />
-                <StyledButton
-                  type="submit"
-                  fullWidth
-                  variant="contained"
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  color="primary" 
+                  fullWidth 
                   size="large"
-                  disabled={this.isLocked}
+                  disabled={this.state.loading}
                   sx={{ 
-                    mt: 3,
-                    py: 2,
-                    fontSize: '1.1rem',
-                    letterSpacing: '1px',
-                    transition: 'all 0.3s ease',
+                    mt: 3, 
+                    mb: 2,
+                    py: 1.5,
+                    backgroundColor: '#800000',
                     '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(128, 0, 0, 0.4)'
-                    }
+                      backgroundColor: '#6b0000'
+                    },
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(128,0,0,0.2)',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
                   }}
                 >
-                  {this.isLocked ? `Wait ${this.lockoutTimer}s` : 'Sign In'}
-                </StyledButton>
+                  {this.state.loading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    'Login'
+                  )}
+                </Button>
               </Box>
             </StyledPaper>
           </Container>

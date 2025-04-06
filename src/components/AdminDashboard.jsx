@@ -548,6 +548,30 @@ class AdminDashboard extends Component {
     });
   }
 
+  // Add this method to handle form submission via Enter key
+  handleEditFormKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.handleEdit();
+    }
+  }
+
+  // For the delete dialog, add key press handling
+  handleDeleteDialogKeyDown = (event) => {
+    if (event.key === 'Enter' && !this.loading) {
+      event.preventDefault();
+      this.handleDeleteConfirm();
+    }
+  }
+
+  // For the logout dialog, add key press handling
+  handleLogoutDialogKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.handleLogoutConfirm();
+    }
+  }
+
   render() {
     if (this.loading) {
       return (
@@ -860,7 +884,12 @@ class AdminDashboard extends Component {
             Edit User
           </DialogTitle>
           <DialogContent sx={{ py: 3, px: 3 }}>
-            <Box component="form" sx={{ mt: 2 }}>
+            <Box 
+              component="form" 
+              sx={{ mt: 2 }}
+              onKeyDown={this.handleEditFormKeyDown}
+              noValidate
+            >
               <TextField
                 fullWidth
                 margin="dense"
@@ -1039,13 +1068,16 @@ class AdminDashboard extends Component {
             >
               Confirm Logout
             </DialogTitle>
-            <DialogContent sx={{ 
-              py: 3,
-              px: 3,
-              typography: 'body1',
-              color: 'text.secondary',
-              backgroundColor: '#ffffff'
-            }}>
+            <DialogContent 
+              sx={{ 
+                py: 3,
+                px: 3,
+                typography: 'body1',
+                color: 'text.secondary',
+                backgroundColor: '#ffffff'
+              }}
+              onKeyDown={this.handleLogoutDialogKeyDown}
+            >
               Are you sure you want to log out of the admin dashboard?
             </DialogContent>
             <DialogActions sx={{ 
@@ -1116,11 +1148,14 @@ class AdminDashboard extends Component {
             }}>
               Confirm Delete
             </DialogTitle>
-            <DialogContent sx={{ 
-              py: 3,
-              px: 3,
-              backgroundColor: '#ffffff'
-            }}>
+            <DialogContent 
+              sx={{ 
+                py: 3,
+                px: 3,
+                backgroundColor: '#ffffff'
+              }}
+              onKeyDown={this.handleDeleteDialogKeyDown}
+            >
               <Typography>
                 Are you sure you want to delete this user?
                 {this.userToDelete && (
