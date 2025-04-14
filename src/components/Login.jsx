@@ -195,11 +195,11 @@ class Login extends Component {
   }
 
   componentDidMount() {
-    document.title = 'CIT-U WILDCORE AMS';
+    document.title = 'WILD R.O.U.T.E AMS';
   }
 
   componentWillUnmount() {
-    document.title = 'CIT-U WILDCORE AMS';
+    document.title = 'WILD R.O.U.T.E AMS';
   }
 
   render() {
@@ -213,7 +213,7 @@ class Login extends Component {
                 alignItems: 'center',
                 flexGrow: 1 
               }}>
-                <LogoImage src={wordLogo} alt="WILDCORE" />
+                <LogoImage src={wordLogo} alt="WILD R.O.U.T.E AMS" />
               </Box>
             </Toolbar>
           </StyledAppBar>

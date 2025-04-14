@@ -587,7 +587,7 @@ class AdminDashboard extends Component {
           <StyledAppBar position="static">
             <Toolbar sx={{ minHeight: '70px' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                <LogoImage src={wordLogo} alt="WILDCORE" />
+                <LogoImage src={wordLogo} alt="WILD R.O.U.T.E AMS" />
               </Box>
               <Typography 
                 sx={{ 
