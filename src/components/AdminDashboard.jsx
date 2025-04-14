@@ -63,7 +63,7 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 }));
 
 const LogoImage = styled('img')({
-  height: '40px',
+  height: '70px',
   width: 'auto',
   marginLeft: '16px',
   transition: 'all 0.3s ease',
